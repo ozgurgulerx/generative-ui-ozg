@@ -131,35 +131,60 @@ def build_client() -> OpenAI:
 
 
 def generate_schema(client: OpenAI, traits: dict, model: str) -> dict:
-    """Call GPT-5 to generate UI schema."""
+    """Call GPT-5 to generate UI schema using Responses API."""
     user_prompt = build_user_prompt(traits)
     full_input = f"{SYSTEM_PROMPT}\n\n{user_prompt}"
 
-    print(f"Calling Azure OpenAI {model}...")
+    print(f"Calling Azure OpenAI {model} via responses.create()...")
     print(f"Input length: {len(full_input)} chars")
 
     try:
+        # Call responses.create() API as per analyze_startups pattern
         response = client.responses.create(
             model=model,
             input=full_input,
         )
 
-        # Extract response text
-        if hasattr(response, "choices") and len(response.choices) > 0:
-            output_text = response.choices[0].message.content
-        elif hasattr(response, "output"):
+        # Extract text from response - try multiple paths
+        output_text = None
+        
+        # Try output_text attribute first
+        if hasattr(response, "output_text") and response.output_text:
+            output_text = response.output_text
+        # Try output attribute
+        elif hasattr(response, "output") and response.output:
             output_text = response.output
-        else:
-            output_text = str(response)
+        # Try choices path (fallback for different API versions)
+        elif hasattr(response, "choices") and len(response.choices) > 0:
+            choice = response.choices[0]
+            if hasattr(choice, "message") and hasattr(choice.message, "content"):
+                output_text = choice.message.content
+            elif hasattr(choice, "text"):
+                output_text = choice.text
 
-        print(f"Response length: {len(output_text)} chars")
+        if not output_text:
+            raise RuntimeError(f"Could not extract text from response: {response}")
+
+        print(f"✓ Response received ({len(output_text)} chars)")
+
+        # Clean up response (remove markdown code blocks if present)
+        output_text = output_text.strip()
+        if output_text.startswith("```json"):
+            output_text = output_text[7:]
+        if output_text.startswith("```"):
+            output_text = output_text[3:]
+        if output_text.endswith("```"):
+            output_text = output_text[:-3]
+        output_text = output_text.strip()
 
         # Parse JSON
         schema = json.loads(output_text)
+        print("✓ JSON parsed successfully")
         return schema
 
     except json.JSONDecodeError as e:
         print(f"❌ Failed to parse JSON: {e}", file=sys.stderr)
+        print(f"Response preview: {output_text[:500] if output_text else 'None'}", file=sys.stderr)
         raise
     except Exception as e:
         print(f"❌ API call failed: {e}", file=sys.stderr)

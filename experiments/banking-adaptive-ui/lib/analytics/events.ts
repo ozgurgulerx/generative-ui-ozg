@@ -4,7 +4,13 @@
 
 export type ActionId = 'TRANSFER' | 'PAY_BILL' | 'FX' | 'OPEN_SAVINGS'
 
-export type JourneyId = 'BILLPAY_STARTED' | 'BILLPAY_CANCELLED' | 'BILLPAY_COMPLETED'
+export type JourneyId = 
+  | 'BILLPAY_STARTED' 
+  | 'BILLPAY_CANCELLED' 
+  | 'BILLPAY_COMPLETED'
+  | 'TRANSFER_STARTED'
+  | 'TRANSFER_COMPLETED'
+  | 'TRANSFER_CANCELLED'
 
 export type EventType =
   | 'view'

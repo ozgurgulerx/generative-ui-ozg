@@ -74,9 +74,27 @@ const ContinueBillPaySectionSchema = z.object({
   }),
 })
 
+const TransactionHistorySectionSchema = z.object({
+  id: z.string(),
+  component: z.literal('TransactionHistory'),
+  props: z.object({
+    compact: z.boolean().optional(),
+  }),
+})
+
+const AccountCardSectionSchema = z.object({
+  id: z.string(),
+  component: z.literal('AccountCard'),
+  props: z.object({
+    accountType: z.enum(['checking', 'savings']).optional(),
+  }),
+})
+
 const SectionSchema = z.discriminatedUnion('component', [
   HeroCardSectionSchema,
+  AccountCardSectionSchema,
   ActionGridSectionSchema,
+  TransactionHistorySectionSchema,
   FXRatesSectionSchema,
   BalancesSectionSchema,
   OffersCardSectionSchema,
@@ -86,7 +104,7 @@ const SectionSchema = z.discriminatedUnion('component', [
 
 export const UISchemaValidator = z.object({
   version: z.literal('1.0'),
-  sections: z.array(SectionSchema).max(5), // ≤5 sections
+  sections: z.array(SectionSchema).max(8), // ≤8 sections (more complex UI)
 })
 
 export type UISchema = z.infer<typeof UISchemaValidator>

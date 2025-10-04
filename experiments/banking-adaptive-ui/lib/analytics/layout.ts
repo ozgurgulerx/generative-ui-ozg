@@ -11,20 +11,29 @@ import type { UISchema } from '@/personalization/schema'
 export function chooseLayout(traits: UserTraits): UISchema {
   const sections: UISchema['sections'] = []
 
-  // Always include HeroCard at top
+  // Hero card with personalized message
+  const greeting = getPersonalizedGreeting(traits)
   sections.push({
     id: 'hero',
     component: 'HeroCard',
     props: {
-      title: traits.locale === 'tr' ? 'Hesabınıza Hoş Geldiniz' : 'Welcome to Your Account',
-      subtitle:
-        traits.locale === 'tr'
-          ? 'Kişiselleştirilmiş bankacılık deneyimi'
-          : 'Your personalized banking experience',
+      title: greeting.title,
+      subtitle: greeting.subtitle,
     },
   })
 
-  // Continue incomplete Bill Pay journey if present
+  // Show prominent account card if high engagement
+  if (traits.explorerScore > 0.3 || traits.transferAffinity > 0.4) {
+    sections.push({
+      id: 'account-card',
+      component: 'AccountCard',
+      props: {
+        accountType: 'checking',
+      },
+    })
+  }
+
+  // Continue incomplete journeys (high priority)
   if (traits.incompleteBillPay) {
     sections.push({
       id: 'continue-billpay',
@@ -33,7 +42,7 @@ export function chooseLayout(traits: UserTraits): UISchema {
     })
   }
 
-  // Prioritize ActionGrid based on affinities and last paths
+  // Prioritized ActionGrid based on behavior
   const actions = buildActionOrder(traits)
   sections.push({
     id: 'actions',
@@ -41,7 +50,16 @@ export function chooseLayout(traits: UserTraits): UISchema {
     props: { actions },
   })
 
-  // Include FX widget if affinity is high or searched recently
+  // Transaction history - show compact if explorer, full if frequent user
+  if (traits.topActions.length > 0 || traits.explorerScore > 0.2) {
+    sections.push({
+      id: 'transactions',
+      component: 'TransactionHistory',
+      props: { compact: traits.explorerScore < 0.5 },
+    })
+  }
+
+  // FX widget if interested
   if (shouldShowFX(traits)) {
     const expanded = shouldExpandFX(traits)
     sections.push({
@@ -51,25 +69,25 @@ export function chooseLayout(traits: UserTraits): UISchema {
     })
   }
 
-  // Always include Balances
+  // Balances (always show but position varies)
   sections.push({
     id: 'balances',
     component: 'Balances',
     props: {},
   })
 
-  // Show recent beneficiaries if transfer affinity is high
+  // Recent beneficiaries for frequent transferrers
   if (traits.transferAffinity > 0.3) {
     sections.push({
       id: 'recent-beneficiaries',
       component: 'RecentBeneficiaries',
       props: {
-        aliases: ['Alias-A', 'Alias-B'], // Mock aliases
+        aliases: ['John D.', 'Alice M.', 'Rent Payment'],
       },
     })
   }
 
-  // Show offers card if explorer score is high or Savings path visited
+  // Offers for engaged users
   if (shouldShowOffers(traits)) {
     sections.push({
       id: 'offers',
@@ -78,8 +96,8 @@ export function chooseLayout(traits: UserTraits): UISchema {
         title: traits.locale === 'tr' ? 'Otomatik Tasarruf Başlat' : 'Set up Auto-Save',
         body:
           traits.locale === 'tr'
-            ? 'Her ay otomatik olarak tasarruf edin'
-            : 'Automatically save every month',
+            ? 'Her ay otomatik olarak tasarruf edin ve hedeflerinize daha hızlı ulaşın'
+            : 'Automatically save every month and reach your goals faster',
         cta: { text: traits.locale === 'tr' ? 'Başlat' : 'Get Started', actionId: 'OPEN_SAVINGS' },
       },
     })
@@ -88,6 +106,51 @@ export function chooseLayout(traits: UserTraits): UISchema {
   return {
     version: '1.0',
     sections,
+  }
+}
+
+/**
+ * Get personalized greeting based on user behavior
+ */
+function getPersonalizedGreeting(traits: UserTraits): { title: string; subtitle: string } {
+  const isActiveTR = traits.locale === 'tr'
+  
+  // Highly engaged user
+  if (traits.explorerScore > 0.6 || traits.topActions.length >= 3) {
+    return {
+      title: isActiveTR ? 'Tekrar Hoş Geldiniz!' : 'Welcome Back!',
+      subtitle: isActiveTR 
+        ? 'Size özel bankacılık deneyiminiz hazır'
+        : 'Your personalized banking experience is ready',
+    }
+  }
+  
+  // Frequent FX user
+  if (traits.fxAffinity > 0.5) {
+    return {
+      title: isActiveTR ? 'Döviz İşlemleriniz' : 'Your Currency Exchange',
+      subtitle: isActiveTR
+        ? 'Güncel kurlar ve hızlı işlem imkanı'
+        : 'Live rates and quick exchange',
+    }
+  }
+  
+  // Frequent transferrer
+  if (traits.transferAffinity > 0.5) {
+    return {
+      title: isActiveTR ? 'Hızlı Transfer' : 'Quick Transfer',
+      subtitle: isActiveTR
+        ? 'En sık kullandığınız alıcılar hazır'
+        : 'Your frequent recipients are ready',
+    }
+  }
+  
+  // Default
+  return {
+    title: isActiveTR ? 'Hesabınıza Hoş Geldiniz' : 'Welcome to Your Account',
+    subtitle: isActiveTR
+      ? 'Kişiselleştirilmiş bankacılık deneyimi'
+      : 'Your personalized banking experience',
   }
 }
 

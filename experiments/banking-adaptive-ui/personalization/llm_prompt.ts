@@ -25,12 +25,12 @@ type UISchema = {
 
 # Constraints
 
-1. JSON only, ≤5 sections
+1. JSON only, ≤8 sections (can include: HeroCard, AccountCard, ActionGrid, TransactionHistory, FXRates, Balances, OffersCard, RecentBeneficiaries, ContinueBillPay)
 2. Always include "Balances" and "ActionGrid" components
 3. Only use allowlisted ActionIds: TRANSFER, PAY_BILL, FX, OPEN_SAVINGS
 4. Locale: if TR → use Turkish copy; else English
 5. Neutral copy (no fees/rates/APR/claims), no PII
-6. Aliases only for beneficiaries (e.g., "Alias-A", "Alias-B")
+6. Aliases only for beneficiaries (e.g., "John D.", "Alice M.", "Rent Payment")
 
 # Layout Rules
 
@@ -47,13 +47,14 @@ type UISchema = {
 
 Before returning:
 - Valid JSON?
-- ≤5 sections?
+- ≤8 sections?
 - Includes Balances and ActionGrid?
 - All ActionIds from allowlist?
 - Locale matches user?
 - No PII or hard-coded rates?
+- Personalized greeting based on behavior?
 
-Return JSON only, no markdown.`
+Return JSON only, no markdown code blocks.`
 
 export function buildUserPrompt(traits: UserTraits): string {
   const behavior = {
